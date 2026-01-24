@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { Outlet } from "react-router-dom";
 import BarNav from "./components/generals/BarNav";
 import SideBar from "./components/generals/SideBar";
-import Buzon from "./views/Buzzon";
 
 const MainView = () => {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -17,9 +17,10 @@ const MainView = () => {
     <div>
       <BarNav />
       <SideBar open={sidebarOpen} setOpen={setSidebarOpen} />
-      <Buzon sidebarOpen={sidebarOpen} />
+      <Outlet context={{ sidebarOpen }} />
     </div>
   );
 };
 
 export default MainView;
+

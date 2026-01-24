@@ -1,9 +1,12 @@
 import React, { useState } from "react";
+import { NavLink } from "react-router-dom";
+
 import MensajesIcon from "../../assets/icons/mensajesIcon.png";
 import OpenIcon from "../../assets/icons/openLeft.png";
 import CloseIcon from "../../assets/icons/openRight.png";
 import HouseIcon from "../../assets/icons/houses.png";
-import buzzon from "../../assets/icons/buzzonComentarios.png";
+import BuzzonIcon from "../../assets/icons/buzzonComentarios.png";
+import EventsIcon from "../../assets/icons/events.png";
 
 const SideBar = ({ open, setOpen }) => {
   const [hoverIndex, setHoverIndex] = useState(null);
@@ -19,6 +22,7 @@ const SideBar = ({ open, setOpen }) => {
     display: "flex",
     flexDirection: "column",
     padding: "10px",
+    transition: "width 0.3s ease",
   };
 
   const iconContainer = {
@@ -36,53 +40,63 @@ const SideBar = ({ open, setOpen }) => {
   };
 
   const navigationsViews = [
-    { view: "Buzzon", icon: buzzon },
-    { view: "Mensajes", icon: MensajesIcon },
-    { view: "Departamentos", icon: HouseIcon },
+    { view: "Buzzon", icon: BuzzonIcon, route: "/" },
+    { view: "Eventos", icon: EventsIcon, route: "/eventos" },
+    { view: "Mensajes", icon: MensajesIcon, route: "/mensajes" },
+    { view: "Departamentos", icon: HouseIcon, route: "/departamentos" },
   ];
 
   return (
     <div style={sideBarStyle}>
       {navigationsViews.map((item, index) => (
-        <button
+        <NavLink
           key={index}
-          style={{
+          to={item.route}
+          onMouseEnter={() => setHoverIndex(index)}
+          onMouseLeave={() => setHoverIndex(null)}
+          style={({ isActive }) => ({
             display: "flex",
             alignItems: "center",
             width: "100%",
             padding: "10px",
+            marginBottom: "5px",
             background:
-              hoverIndex === index ? "rgba(138, 42, 42, 0.85)" : "transparent",
+              isActive || hoverIndex === index
+                ? "rgba(138, 42, 42, 0.85)"
+                : "transparent",
+            borderRadius: "10px",
             border: "none",
             color: "white",
             cursor: "pointer",
-          }}
-          onMouseEnter={() => setHoverIndex(index)}
-          onMouseLeave={() => setHoverIndex(null)}
+            textDecoration: "none",
+            transition: "background 0.2s ease",
+          })}
         >
           <div style={iconContainer}>
-            <img src={item.icon} style={imageDimensions} alt="" />
+            <img src={item.icon} style={imageDimensions} alt={item.view} />
           </div>
           {open && item.view}
-        </button>
+        </NavLink>
       ))}
 
+      {/* Botón abrir / cerrar sidebar */}
       <button
         onClick={toggleSidebar}
         style={{
           position: "fixed",
-          left: 20,
+          left: open ? "12vw" : "2vw",
           bottom: 20,
           border: "none",
           background: "transparent",
           cursor: "pointer",
           outline: "none",
+          transition: "left 0.3s ease",
         }}
       >
         <img
           src={open ? OpenIcon : CloseIcon}
           style={{ width: "30px", height: "30px" }}
-          alt="toggle"
+          alt="toggle sidebar"
         />
       </button>
     </div>
