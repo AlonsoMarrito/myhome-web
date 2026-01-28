@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "laravel-echo": "^2.3.0",
-    "pusher-js": "^8.4.0",
+    "pusher-js": "7.6.0",
     "react": "^19.2.0",
     "react-calendar": "^6.0.0",
     "react-dom": "^19.2.0",

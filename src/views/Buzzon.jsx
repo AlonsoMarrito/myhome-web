@@ -3,7 +3,7 @@ import TextTitle from "../components/widgets/TextTitle";
 import RowTable from "../components/widgets/RowTable";
 import { useOutletContext } from "react-router-dom";
 import axios from "axios";
-import { echo } from "../echo"; // Tu instancia de Echo ya configurada
+import echo from "../echo";
 
 const API_URL = "http://localhost:8000/api";
 
@@ -18,16 +18,14 @@ const Buzzon = () => {
 
   const asistenteId = 1;
 
-  /* ===============================
-     CARGAR EVENTOS
-  =============================== */
+  // Cargar todos los eventos
   const cargarEventos = async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${API_URL}/eventos`);
       setEventos(res.data);
 
-      const hoy = new Date().toISOString().split("T")[0];
+      const hoy = new Date().toLocaleDateString("sv-SE");
       const eventoActivoHoy = res.data.find((ev) => ev.fecha === hoy);
       setEventoHoy(eventoActivoHoy || null);
 
@@ -44,9 +42,6 @@ const Buzzon = () => {
     }
   };
 
-  /* ===============================
-     CARGAR PREGUNTAS POR EVENTO
-  =============================== */
   const cargarPreguntasEvento = async (eventoId) => {
     if (!eventoId) return [];
     try {
@@ -68,9 +63,6 @@ const Buzzon = () => {
     }
   };
 
-  /* ===============================
-     SELECCIONAR EVENTO
-  =============================== */
   const seleccionarEvento = async (eventoId) => {
     const ev = eventos.find((e) => e.id === parseInt(eventoId));
     if (!ev) return;
@@ -84,66 +76,40 @@ const Buzzon = () => {
     }
   };
 
-  /* ===============================
-     SUSCRIPCIÓN A WEBSOCKET
-  =============================== */
   useEffect(() => {
     cargarEventos();
 
-    echo.channel("eventos")
-      .listen("NuevaPregunta", (e) => {
-        const preguntaNueva = e.pregunta;
-        console.log("Evento recibido desde backend:", e);
-
-        // Mensaje visual
-        alert(`Nueva pregunta recibida: "${preguntaNueva.pregunta}"`);
-
-        setEventoSeleccionado((prev) => {
-          if (prev.id === preguntaNueva.id_evento) {
-            return {
-              ...prev,
-              preguntas: [
-                ...prev.preguntas,
-                { ...preguntaNueva, votos: { si: 0, no: 0, abstengo: 0 } },
-              ],
-            };
-          }
-          return prev;
-        });
-      });
+    const canal = echo.channel("eventos");
+    canal.listen(".NuevaPregunta", async () => {
+      console.log("Evento recibido, recargando preguntas...");
+      if (eventoSeleccionado?.id) {
+        const preguntasActualizadas = await cargarPreguntasEvento(eventoSeleccionado.id);
+        setEventoSeleccionado((prev) => ({
+          ...prev,
+          preguntas: preguntasActualizadas,
+        }));
+      }
+    });
 
     return () => {
       echo.leaveChannel("eventos");
     };
-  }, []);
+  }, [eventoSeleccionado?.id]);
 
-  /* ===============================
-     AGREGAR PREGUNTA
-  =============================== */
-  const agregarPregunta = async () => {
+  async function agregarPregunta() {
     if (!nuevaPregunta.trim() || !eventoHoy) return;
     try {
-      const res = await axios.post(`${API_URL}/preguntas`, {
+      await axios.post(`${API_URL}/preguntas`, {
         pregunta: nuevaPregunta,
         id_evento: eventoHoy.id,
       });
 
-      const nueva = { ...res.data, votos: { si: 0, no: 0, abstengo: 0 } };
-      setEventoSeleccionado((prev) => ({
-        ...prev,
-        preguntas: [...(prev.preguntas || []), nueva],
-      }));
       setNuevaPregunta("");
-
-      console.log("Pregunta creada y evento disparado:", res.data);
     } catch (error) {
       console.error("Error creando pregunta:", error.response?.data || error.message);
     }
-  };
+  }
 
-  /* ===============================
-     RESPONDER PREGUNTA
-  =============================== */
   const responderPregunta = async (tipo, pregunta) => {
     if (!pregunta) return;
     try {
@@ -167,9 +133,7 @@ const Buzzon = () => {
     }
   };
 
-  /* ===============================
-     ESTILOS CON LÓGICA DE SIDEBAR
-  =============================== */
+  // Estilos
   let longSideBar = 85;
   if (sidebarOpen) longSideBar -= 8;
 
@@ -213,110 +177,67 @@ const Buzzon = () => {
     border: "none",
   };
 
-  /* ===============================
-     RENDER
-  =============================== */
+  const scrollContainer = {
+    flex: 1,
+    overflowY: "auto",
+  };
+
   return (
     <div style={bodyBuzzon}>
-      <TextTitle textTitleParam="Buzzón Vecinal" />
+  <TextTitle textTitleParam="Buzzón Vecinal" />
 
-      <div style={{ display: "flex", gap: "20px", flex: 1 }}>
-        {/* IZQUIERDA */}
-        <div style={{ flex: 3, display: "flex", flexDirection: "column" }}>
-          <div style={{ flex: 1, overflowY: "auto", marginBottom: "15px" }}>
-            {loading && <p>Cargando...</p>}
-            {!loading && !eventoHoy && <p style={{ opacity: 0.6 }}>No hay evento activo hoy</p>}
-            {!loading && eventoSeleccionado?.preguntas?.length === 0 && (
-              <p style={{ opacity: 0.6 }}>Aún no hay preguntas en este evento</p>
-            )}
-            {eventoSeleccionado?.preguntas?.map((p) => (
-              <RowTable
-                key={p.id}
-                pregunta={{
-                  ...p,
-                  resumen: `Sí: ${p.votos?.si || 0} | No: ${p.votos?.no || 0} | Abst: ${p.votos?.abstengo || 0}`,
-                }}
-                respuestas={p.votos || {}}
-              />
-            ))}
-          </div>
+  <div style={{ display: "flex", gap: "20px", flex: 1, height: "70%" }}>
+    {/* IZQUIERDA */}
+    <div style={{ flex: 3, display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Contenedor scrollable */}
+      <div style={{ flex: 1, overflowY: "auto", marginBottom: "10px" }}>
+        {eventoSeleccionado?.preguntas?.map((p) => (
+          <RowTable
+            key={p.id}
+            pregunta={{
+              ...p,
+              resumen: `Sí: ${p.votos?.si || 0} | No: ${p.votos?.no || 0} | Abst: ${p.votos?.abstengo || 0}`,
+            }}
+            respuestas={p.votos || {}}
+          />
+        ))}
+      </div>
 
-          <div style={{ display: "flex", gap: "10px" }}>
-            <input
-              placeholder="Escribe tu pregunta..."
-              value={nuevaPregunta}
-              onChange={(e) => setNuevaPregunta(e.target.value)}
-              style={inputStyle}
-              disabled={!eventoHoy}
-            />
-            <button onClick={agregarPregunta} style={buttonStyle} disabled={!eventoHoy}>
-              Enviar
-            </button>
-          </div>
-        </div>
-
-        {/* DERECHA */}
-        <div
-          style={{
-            flex: 2,
-            background: "rgba(255,255,255,0.05)",
-            borderRadius: "15px",
-            padding: "15px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "15px",
-            overflowY: "auto",
-          }}
-        >
-          <div>
-            <h4>Selecciona un evento</h4>
-            <select
-              value={eventoSeleccionado?.id || ""}
-              onChange={(e) => seleccionarEvento(e.target.value)}
-              style={selectStyle}
-            >
-              {eventos.map((ev) => (
-                <option key={ev.id} value={ev.id}>
-                  {ev.fecha} - {ev.descripcion}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <h4>Preguntas del evento</h4>
-            {eventoSeleccionado?.preguntas?.length > 0 ? (
-              eventoSeleccionado.preguntas.map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: "10px",
-                    padding: "10px",
-                    marginBottom: "10px",
-                  }}
-                >
-                  <p>{p.pregunta}</p>
-                  <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                    <button onClick={() => responderPregunta("si", p)}>
-                      Sí ({p.votos?.si || 0})
-                    </button>
-                    <button onClick={() => responderPregunta("no", p)}>
-                      No ({p.votos?.no || 0})
-                    </button>
-                    <button onClick={() => responderPregunta("abstengo", p)}>
-                      Abstengo ({p.votos?.abstengo || 0})
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p style={{ opacity: 0.6 }}>Aún no hay preguntas en este evento</p>
-            )}
-          </div>
-        </div>
+      {/* Input fijo abajo */}
+      <div style={{ display: "flex", gap: "10px" }}>
+        <input placeholder="Escribe tu pregunta..." value={nuevaPregunta} onChange={(e) => setNuevaPregunta(e.target.value)} style={inputStyle} />
+        <button onClick={agregarPregunta} style={buttonStyle}>Enviar</button>
       </div>
     </div>
+
+    {/* DERECHA */}
+    <div style={{ flex: 2, display: "flex", flexDirection: "column", height: "100%", borderRadius: "15px", background: "rgba(255,255,255,0.05)", padding: "15px" }}>
+      {/* Select fijo arriba */}
+      <div>
+        <h4>Selecciona un evento</h4>
+        <select value={eventoSeleccionado?.id || ""} onChange={(e) => seleccionarEvento(e.target.value)} style={selectStyle}>
+          {eventos.map((ev) => <option key={ev.id} value={ev.id}>{ev.fecha} - {ev.descripcion}</option>)}
+        </select>
+      </div>
+
+      {/* Contenedor scrollable para preguntas */}
+      <div style={{ flex: 1, overflowY: "auto", marginTop: "15px" }}>
+        <h4>Preguntas del evento</h4>
+        {eventoSeleccionado?.preguntas?.map((p) => (
+          <div key={p.id} style={{ border: "1px solid rgba(255,255,255,0.2)", borderRadius: "10px", padding: "10px", marginBottom: "10px" }}>
+            <p>{p.pregunta}</p>
+            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+              <button onClick={() => responderPregunta("si", p)}>Sí ({p.votos?.si || 0})</button>
+              <button onClick={() => responderPregunta("no", p)}>No ({p.votos?.no || 0})</button>
+              <button onClick={() => responderPregunta("abstengo", p)}>Abstengo ({p.votos?.abstengo || 0})</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>
+
   );
 };
 
