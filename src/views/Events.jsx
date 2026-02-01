@@ -15,9 +15,8 @@ const Events = () => {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [eventoExistente, setEventoExistente] = useState(null);
 
-  /* =======================
-     CARGAR EVENTOS
-  ======================= */
+  const [modalConfirmacion, setModalConfirmacion] = useState(null);
+
   const cargarEventos = async () => {
     try {
       const res = await fetch(API_URL);
@@ -31,6 +30,17 @@ const Events = () => {
   useEffect(() => {
     cargarEventos();
   }, []);
+
+  // 🔹 Auto cerrar modal confirmación en 2s
+  useEffect(() => {
+    if (modalConfirmacion) {
+      const timer = setTimeout(() => {
+        setModalConfirmacion(null);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [modalConfirmacion]);
 
   /* =======================
      UI SIDEBAR
@@ -97,6 +107,7 @@ const Events = () => {
 
       await cargarEventos();
       cerrarModal();
+      setModalConfirmacion("Evento agregado correctamente ✅");
     } catch (error) {
       console.error("Error guardando evento", error);
     }
@@ -110,6 +121,7 @@ const Events = () => {
 
       await cargarEventos();
       cerrarModal();
+      setModalConfirmacion("Evento eliminado correctamente 🗑");
     } catch (error) {
       console.error("Error eliminando evento", error);
     }
@@ -121,7 +133,6 @@ const Events = () => {
     setEventoExistente(null);
     setFechaSeleccionada(null);
   };
-
 
   return (
     <div style={bodyBuzzon}>
@@ -135,7 +146,7 @@ const Events = () => {
           overflow: "hidden",
         }}
       >
-
+        {/* ===== CALENDARIO ===== */}
         <div style={{ flex: 2, height: "100%" }}>
           <Calendar
             onClickDay={onClickDay}
@@ -146,7 +157,7 @@ const Events = () => {
           />
         </div>
 
-
+        {/* ===== JUNTA HOY ===== */}
         <div
           style={{
             flex: 1,
@@ -193,10 +204,10 @@ const Events = () => {
         </div>
       </div>
 
-
+      {/* ===== MODAL CREAR / CANCELAR ===== */}
       {mostrarModal && (
-        <div style={modalOverlay}>
-          <div style={modalBox}>
+        <div style={modalOverlay} className="modal-overlay">
+          <div style={modalBox} className="modal-box">
             {eventoExistente ? (
               <>
                 <h3>Ya existe una junta</h3>
@@ -238,63 +249,87 @@ const Events = () => {
         </div>
       )}
 
-      <style>
-        {`
-          .react-calendar {
-            width: 100%;
-            height: 100%;
-            background: rgba(255,255,255,0.05);
-            border: none;
-            border-radius: 15px;
-            padding: 10px;
-            color: white;
-          }
+      {modalConfirmacion && (
+        <div style={modalOverlay} className="modal-overlay">
+          <div style={modalBox} className="modal-box">
+            <h3>Confirmación</h3>
+            <p style={{ margin: "20px 0", opacity: 0.85 }}>
+              {modalConfirmacion}
+            </p>
+          </div>
+        </div>
+      )}
 
-          .react-calendar__tile {
-            border-radius: 10px;
-          }
+      <style>{`
+        .react-calendar {
+          width: 100%;
+          height: 100%;
+          background: rgba(255,255,255,0.05);
+          border: none;
+          border-radius: 15px;
+          padding: 10px;
+          color: white;
+        }
 
-          .react-calendar__tile:enabled:hover {
-            background: rgba(255,255,255,0.15);
-          }
+        .react-calendar__tile {
+          border-radius: 10px;
+        }
 
-          .dia-con-evento {
-            background: rgba(255, 215, 0, 0.35) !important;
-            color: black !important;
-            font-weight: bold;
-          }
+        .react-calendar__tile:enabled:hover {
+          background: rgba(255,255,255,0.15);
+        }
 
-          .react-calendar__tile--now {
-            background: rgba(255, 120, 120, 0.35);
-          }
+        .dia-con-evento {
+          background: rgba(255, 215, 0, 0.35) !important;
+          color: black !important;
+          font-weight: bold;
+        }
 
-          .react-calendar__navigation button {
-            color: white;
-            border-radius: 10px;
-          }
+        .react-calendar__tile--now {
+          background: rgba(255, 120, 120, 0.35);
+        }
 
-          .react-calendar__navigation button:enabled:hover {
-            background: rgba(138, 42, 42, 0.45);
-            color: #fff;
-          }
+        .react-calendar__navigation button {
+          color: white;
+          border-radius: 10px;
+        }
 
-          /* Hover del nombre del mes */
-          .react-calendar__navigation__label:enabled:hover {
-            background: rgba(255, 215, 0, 0.35);
-            color: black;
-          }
+        .react-calendar__navigation button:enabled:hover {
+          background: rgba(138, 42, 42, 0.45);
+        }
 
-          /* Evitar blanco al hacer focus */
-          .react-calendar__navigation button:focus {
-            background: rgba(138, 42, 42, 0.35);
-          }
+        .react-calendar__navigation__label:enabled:hover {
+          background: rgba(255, 215, 0, 0.35);
+          color: black;
+        }
 
-        `}
-      </style>
+        .react-calendar__navigation button:focus {
+          background: rgba(138, 42, 42, 0.35);
+        }
+
+        .modal-overlay {
+          animation: fadeIn 0.25s ease forwards;
+        }
+
+        .modal-box {
+          animation: scaleIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.85) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
 
+/* ===== ESTILOS JS ===== */
 const modalOverlay = {
   position: "fixed",
   inset: 0,

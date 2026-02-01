@@ -18,7 +18,6 @@ const Buzzon = () => {
 
   const asistenteId = 1;
 
-  // Cargar todos los eventos
   const cargarEventos = async () => {
     try {
       setLoading(true);
@@ -133,7 +132,6 @@ const Buzzon = () => {
     }
   };
 
-  // Estilos
   let longSideBar = 85;
   if (sidebarOpen) longSideBar -= 8;
 
@@ -187,9 +185,7 @@ const Buzzon = () => {
   <TextTitle textTitleParam="Buzzón Vecinal" />
 
   <div style={{ display: "flex", gap: "20px", flex: 1, height: "70%" }}>
-    {/* IZQUIERDA */}
     <div style={{ flex: 3, display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Contenedor scrollable */}
       <div style={{ flex: 1, overflowY: "auto", marginBottom: "10px" }}>
         {eventoSeleccionado?.preguntas?.map((p) => (
           <RowTable
@@ -203,16 +199,13 @@ const Buzzon = () => {
         ))}
       </div>
 
-      {/* Input fijo abajo */}
       <div style={{ display: "flex", gap: "10px" }}>
         <input placeholder="Escribe tu pregunta..." value={nuevaPregunta} onChange={(e) => setNuevaPregunta(e.target.value)} style={inputStyle} />
         <button onClick={agregarPregunta} style={buttonStyle}>Enviar</button>
       </div>
     </div>
 
-    {/* DERECHA */}
     <div style={{ flex: 2, display: "flex", flexDirection: "column", height: "100%", borderRadius: "15px", background: "rgba(255,255,255,0.05)", padding: "15px" }}>
-      {/* Select fijo arriba */}
       <div>
         <h4>Selecciona un evento</h4>
         <select value={eventoSeleccionado?.id || ""} onChange={(e) => seleccionarEvento(e.target.value)} style={selectStyle}>
@@ -220,7 +213,6 @@ const Buzzon = () => {
         </select>
       </div>
 
-      {/* Contenedor scrollable para preguntas */}
       <div style={{ flex: 1, overflowY: "auto", marginTop: "15px" }}>
         <h4>Preguntas del evento</h4>
         {eventoSeleccionado?.preguntas?.map((p) => (

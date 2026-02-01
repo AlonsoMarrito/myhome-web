@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import BarNav from "./components/generals/BarNav";
 import SideBar from "./components/generals/SideBar";
+import BellNotification from "./components/generals/bells";
 
 const MainView = () => {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -17,6 +18,7 @@ const MainView = () => {
     <div>
       <BarNav />
       <SideBar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <BellNotification />
       <Outlet context={{ sidebarOpen }} />
     </div>
   );
