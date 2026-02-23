@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import TextTitle from "../components/widgets/TextTitle";
 import RowTable from "../components/widgets/RowTable";
 import { useOutletContext } from "react-router-dom";
 import axios from "axios";
 import echo from "../echo";
+import { AuthContext } from "../context/AuthContext";
 
 const API_URL = "http://localhost:8000/api";
 
 const Buzzon = () => {
   const { sidebarOpen } = useOutletContext();
+  const { token } = useContext(AuthContext); // token para enviar en headers
 
   const [eventos, setEventos] = useState([]);
   const [eventoSeleccionado, setEventoSeleccionado] = useState({ preguntas: [] });
@@ -18,10 +20,17 @@ const Buzzon = () => {
 
   const asistenteId = 1;
 
+  // Config para Axios con token
+  const axiosConfig = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
   const cargarEventos = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/eventos`);
+      const res = await axios.get(`${API_URL}/eventos`, axiosConfig);
       setEventos(res.data);
 
       const hoy = new Date().toLocaleDateString("sv-SE");
@@ -44,11 +53,11 @@ const Buzzon = () => {
   const cargarPreguntasEvento = async (eventoId) => {
     if (!eventoId) return [];
     try {
-      const res = await axios.get(`${API_URL}/preguntas?id_evento=${eventoId}`);
+      const res = await axios.get(`${API_URL}/preguntas?id_evento=${eventoId}`, axiosConfig);
       const preguntasConVotos = await Promise.all(
         res.data.map(async (p) => {
           try {
-            const votosRes = await axios.get(`${API_URL}/respuestas-count?id_pregunta=${p.id}`);
+            const votosRes = await axios.get(`${API_URL}/respuestas-count?id_pregunta=${p.id}`, axiosConfig);
             return { ...p, votos: votosRes.data || { si: 0, no: 0, abstengo: 0 } };
           } catch {
             return { ...p, votos: { si: 0, no: 0, abstengo: 0 } };
@@ -98,10 +107,14 @@ const Buzzon = () => {
   async function agregarPregunta() {
     if (!nuevaPregunta.trim() || !eventoHoy) return;
     try {
-      await axios.post(`${API_URL}/preguntas`, {
-        pregunta: nuevaPregunta,
-        id_evento: eventoHoy.id,
-      });
+      await axios.post(
+        `${API_URL}/preguntas`,
+        {
+          pregunta: nuevaPregunta,
+          id_evento: eventoHoy.id,
+        },
+        axiosConfig
+      );
 
       setNuevaPregunta("");
     } catch (error) {
@@ -112,13 +125,17 @@ const Buzzon = () => {
   const responderPregunta = async (tipo, pregunta) => {
     if (!pregunta) return;
     try {
-      await axios.post(`${API_URL}/respuestas`, {
-        id_pregunta: pregunta.id,
-        id_asistente: asistenteId,
-        respuesta: tipo,
-      });
+      await axios.post(
+        `${API_URL}/respuestas`,
+        {
+          id_pregunta: pregunta.id,
+          id_asistente: asistenteId,
+          respuesta: tipo,
+        },
+        axiosConfig
+      );
 
-      const votosRes = await axios.get(`${API_URL}/respuestas-count?id_pregunta=${pregunta.id}`);
+      const votosRes = await axios.get(`${API_URL}/respuestas-count?id_pregunta=${pregunta.id}`, axiosConfig);
       const nuevosVotos = votosRes.data || { si: 0, no: 0, abstengo: 0 };
 
       setEventoSeleccionado((prev) => ({
@@ -175,61 +192,90 @@ const Buzzon = () => {
     border: "none",
   };
 
-  const scrollContainer = {
-    flex: 1,
-    overflowY: "auto",
-  };
-
   return (
     <div style={bodyBuzzon}>
-  <TextTitle textTitleParam="Buzzón Vecinal" />
+      <TextTitle textTitleParam="Buzzón Vecinal" />
 
-  <div style={{ display: "flex", gap: "20px", flex: 1, height: "70%" }}>
-    <div style={{ flex: 3, display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ flex: 1, overflowY: "auto", marginBottom: "10px" }}>
-        {eventoSeleccionado?.preguntas?.map((p) => (
-          <RowTable
-            key={p.id}
-            pregunta={{
-              ...p,
-              resumen: `Sí: ${p.votos?.si || 0} | No: ${p.votos?.no || 0} | Abst: ${p.votos?.abstengo || 0}`,
-            }}
-            respuestas={p.votos || {}}
-          />
-        ))}
-      </div>
-
-      <div style={{ display: "flex", gap: "10px" }}>
-        <input placeholder="Escribe tu pregunta..." value={nuevaPregunta} onChange={(e) => setNuevaPregunta(e.target.value)} style={inputStyle} />
-        <button onClick={agregarPregunta} style={buttonStyle}>Enviar</button>
-      </div>
-    </div>
-
-    <div style={{ flex: 2, display: "flex", flexDirection: "column", height: "100%", borderRadius: "15px", background: "rgba(255,255,255,0.05)", padding: "15px" }}>
-      <div>
-        <h4>Selecciona un evento</h4>
-        <select value={eventoSeleccionado?.id || ""} onChange={(e) => seleccionarEvento(e.target.value)} style={selectStyle}>
-          {eventos.map((ev) => <option key={ev.id} value={ev.id}>{ev.fecha} - {ev.descripcion}</option>)}
-        </select>
-      </div>
-
-      <div style={{ flex: 1, overflowY: "auto", marginTop: "15px" }}>
-        <h4>Preguntas del evento</h4>
-        {eventoSeleccionado?.preguntas?.map((p) => (
-          <div key={p.id} style={{ border: "1px solid rgba(255,255,255,0.2)", borderRadius: "10px", padding: "10px", marginBottom: "10px" }}>
-            <p>{p.pregunta}</p>
-            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-              <button onClick={() => responderPregunta("si", p)}>Sí ({p.votos?.si || 0})</button>
-              <button onClick={() => responderPregunta("no", p)}>No ({p.votos?.no || 0})</button>
-              <button onClick={() => responderPregunta("abstengo", p)}>Abstengo ({p.votos?.abstengo || 0})</button>
-            </div>
+      <div style={{ display: "flex", gap: "20px", flex: 1, height: "70%" }}>
+        <div style={{ flex: 3, display: "flex", flexDirection: "column", height: "100%" }}>
+          <div style={{ flex: 1, overflowY: "auto", marginBottom: "10px" }}>
+            {eventoSeleccionado?.preguntas?.map((p) => (
+              <RowTable
+                key={p.id}
+                pregunta={{
+                  ...p,
+                  resumen: `Sí: ${p.votos?.si || 0} | No: ${p.votos?.no || 0} | Abst: ${p.votos?.abstengo || 0}`,
+                }}
+                respuestas={p.votos || {}}
+              />
+            ))}
           </div>
-        ))}
+
+          <div style={{ display: "flex", gap: "10px" }}>
+            <input
+              placeholder="Escribe tu pregunta..."
+              value={nuevaPregunta}
+              onChange={(e) => setNuevaPregunta(e.target.value)}
+              style={inputStyle}
+            />
+            <button onClick={agregarPregunta} style={buttonStyle}>
+              Enviar
+            </button>
+          </div>
+        </div>
+
+        <div
+          style={{
+            flex: 2,
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+            borderRadius: "15px",
+            background: "rgba(255,255,255,0.05)",
+            padding: "15px",
+          }}
+        >
+          <div>
+            <h4>Selecciona un evento</h4>
+            <select
+              value={eventoSeleccionado?.id || ""}
+              onChange={(e) => seleccionarEvento(e.target.value)}
+              style={selectStyle}
+            >
+              {eventos.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.fecha} - {ev.descripcion}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", marginTop: "15px" }}>
+            <h4>Preguntas del evento</h4>
+            {eventoSeleccionado?.preguntas?.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  marginBottom: "10px",
+                }}
+              >
+                <p>{p.pregunta}</p>
+                <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                  <button onClick={() => responderPregunta("si", p)}>Sí ({p.votos?.si || 0})</button>
+                  <button onClick={() => responderPregunta("no", p)}>No ({p.votos?.no || 0})</button>
+                  <button onClick={() => responderPregunta("abstengo", p)}>
+                    Abstengo ({p.votos?.abstengo || 0})
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
-
   );
 };
 

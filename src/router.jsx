@@ -3,8 +3,13 @@ import MainView from "./App";
 import Buzzon from "./views/Buzzon";
 import Events from "./views/Events";
 import NotFound from "./views/NotFound";
+import Login from "./views/Login";
 
 const router = createBrowserRouter([
+  {
+    path: "/login",
+    element: <Login />,
+  },
   {
     element: <MainView />,
     children: [
