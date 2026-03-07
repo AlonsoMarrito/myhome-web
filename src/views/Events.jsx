@@ -21,9 +21,19 @@ const Events = () => {
     try {
       const res = await fetch(API_URL);
       const data = await res.json();
-      setEventos(data);
+
+      // 🔹 Normalizar respuesta para asegurar array
+      if (Array.isArray(data)) {
+        setEventos(data);
+      } else if (Array.isArray(data.data)) {
+        setEventos(data.data);
+      } else {
+        setEventos([]);
+      }
+
     } catch (error) {
       console.error("Error cargando eventos", error);
+      setEventos([]);
     }
   };
 
@@ -70,8 +80,10 @@ const Events = () => {
   const formatFecha = (date) =>
     typeof date === "string" ? date : date.toISOString().split("T")[0];
 
-  const obtenerEvento = (fecha) =>
-    eventos.find((e) => e.fecha === fecha);
+  const obtenerEvento = (fecha) => {
+    if (!Array.isArray(eventos)) return null;
+    return eventos.find((e) => e.fecha === fecha);
+  };
 
   const hoy = formatFecha(new Date());
   const juntaHoy = obtenerEvento(hoy);
