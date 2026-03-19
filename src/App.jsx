@@ -15,7 +15,6 @@ const MainView = () => {
     localStorage.setItem("sidebarOpen", JSON.stringify(sidebarOpen));
   }, [sidebarOpen]);
 
-  // Guard: si no hay token, redirige a login
   if (!token) return <Navigate to="/login" replace />;
 
   return (
